@@ -1,5 +1,6 @@
 from pydantic import BaseModel, Field
 from typing import Optional, List
+from JWTmanager import create_token
 
 #Field para vaidacion de datos
 
@@ -25,11 +26,14 @@ class movie(BaseModel):
            }  
         }
      
-     
-
 class movie_out(BaseModel):
         title: str
         overview: str | None
         year: int 
         rating: float | None 
         category: str
+
+class User(BaseModel):
+        email:str
+        password: str
+

@@ -1,9 +1,13 @@
-from fastapi import FastAPI, Path, Query, status
+from fastapi import FastAPI, Path, Query, status, HTTPException, Depends
 from fastapi.responses import HTMLResponse, JSONResponse
-from typing import Optional, List
+from typing import Any, Coroutine, Optional, List
+from starlette.requests import Request
 from config import create_fastapi_config
 from data import movies
-from models import movie,movie_out
+from models import User, movie,movie_out
+from JWTmanager import create_token, validate_token
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from auth import JWTBearer
 
 app = FastAPI() #Instancia de fastAPI
 create_fastapi_config(app)
@@ -14,7 +18,10 @@ def message():
     return HTMLResponse('<head> <title>Mi página de ejemplo</title> </head><body>Aquí va el contenido</body>')
 
 #status_code para asignar un codigo HTTP especifico
-@app.get('/movies', tags=['movies'], response_model= List[movie_out], status_code=status.HTTP_202_ACCEPTED) #List importado para retomar una lista de los modelos de salida
+#dependencies, es una lista de clases dependientes para que se corra este endpoint -> JWTbearer fue nuestra funcion creada para validar ver auth
+
+@app.get('/movies', tags=['movies'], response_model= List[movie_out], status_code=status.HTTP_202_ACCEPTED,
+          dependencies=[Depends(JWTBearer())]) #List importado para retomar una lista de los modelos de salida
 def get_movies() ->  List[movie_out]: #tambien podemos declarar el modelo en la funcion
     return movies
 
@@ -42,7 +49,7 @@ def create_new_movie(movie: movie) -> dict:
 
 
 @app.put('/movies/{id}', tags=['movies'])
-async def update_movie(id:int,movie: movie) -> List[movie_out]:
+async def update_movie(id:int,movie: movie_out) -> List[movie_out]:
      for  item in movies:
         if item['id'] == id:
             item['title'] = movie.title
@@ -50,8 +57,7 @@ async def update_movie(id:int,movie: movie) -> List[movie_out]:
             item['year'] = movie.year
             item['rating'] = movie.rating
             item['category'] = movie.category
-     return movies
-    
+        return movies    
 
 @app.delete('/movies/{id}', tags=['movies'])
 def delete_movie(id:int):
@@ -60,4 +66,9 @@ def delete_movie(id:int):
             movies.remove(movie)
     return movies
 
+@app.post('/login', tags=['auth'])
+def login(user:User):
+    if user.email == 'admin@jep.gov.co' and user.password == 'admin123':
+        token : str = create_token(user.model_dump())
+        return JSONResponse(status_code=status.HTTP_202_ACCEPTED,content=token) 
 

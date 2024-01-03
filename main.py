@@ -8,7 +8,7 @@ from models import User, movie,movie_out
 from JWTmanager import create_token, validate_token
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from auth import JWTBearer
-
+from config_db.database import select_all_movies
 app = FastAPI() #Instancia de fastAPI
 create_fastapi_config(app)
 
@@ -19,11 +19,12 @@ def message():
 
 #status_code para asignar un codigo HTTP especifico
 #dependencies, es una lista de clases dependientes para que se corra este endpoint -> JWTbearer fue nuestra funcion creada para validar ver auth
-
-@app.get('/movies', tags=['movies'], response_model= List[movie_out], status_code=status.HTTP_202_ACCEPTED,
+'''response_model= List[movie_out]'''
+@app.get('/movies', tags=['movies'],status_code=status.HTTP_202_ACCEPTED,
           dependencies=[Depends(JWTBearer())]) #List importado para retomar una lista de los modelos de salida
-def get_movies() ->  List[movie_out]: #tambien podemos declarar el modelo en la funcion
-    return movies
+async def get_movies(): #->  List[movie_out]: #tambien podemos declarar el modelo de salida en la funcion
+    
+    return select_all_movies()
 
 #pamaetro de ruta {id} #basemodel nos puede ayudar a crear un tipo de respusta
 @app.get('/movies/{id}', tags=['movies'])
@@ -66,9 +67,11 @@ def delete_movie(id:int):
             movies.remove(movie)
     return movies
 
+
+#Metodo login que crea un token bearer, para autenticarse en endpoints que lo requieran
 @app.post('/login', tags=['auth'])
 def login(user:User):
     if user.email == 'admin@jep.gov.co' and user.password == 'admin123':
-        token : str = create_token(user.model_dump())
+        token : str = create_token(user.dict())
         return JSONResponse(status_code=status.HTTP_202_ACCEPTED,content=token) 
 
